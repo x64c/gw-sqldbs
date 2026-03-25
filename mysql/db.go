@@ -86,11 +86,16 @@ func (d *DB) Ping(ctx context.Context) error {
 	return d.conn.PingContext(ctx)
 }
 
-func (d *DB) SinglePlaceholder(_ ...int) string {
+
+func (d *DB) FirstPlaceholder() string {
 	return "?"
 }
 
-func (d *DB) Placeholders(cnt int, _ ...int) string {
+func (d *DB) NthPlaceholder(_ int) string {
+	return "?"
+}
+
+func (d *DB) InPlaceholders(_, cnt int) string {
 	placeholders := make([]string, cnt)
 	for i := range placeholders {
 		placeholders[i] = "?"

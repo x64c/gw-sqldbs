@@ -149,26 +149,19 @@ func (d *DB) Ping(ctx context.Context) error {
 	return d.pool.Ping(ctx)
 }
 
-func (d *DB) SinglePlaceholder(nth ...int) string {
-	if len(nth) == 0 {
-		// No-index Provided
-		return "$1"
-	}
-	return fmt.Sprintf("$%d", nth[0])
+
+func (d *DB) FirstPlaceholder() string {
+	return "$1"
 }
 
-func (d *DB) Placeholders(cnt int, start ...int) string {
+func (d *DB) NthPlaceholder(n int) string {
+	return fmt.Sprintf("$%d", n)
+}
+
+func (d *DB) InPlaceholders(start, cnt int) string {
 	placeholders := make([]string, cnt)
-	var startI int
-	if len(start) == 0 {
-		startI = 1
-	} else {
-		startI = start[0]
-	}
-	j := startI
 	for i := range placeholders {
-		placeholders[i] = fmt.Sprintf("$%d", j)
-		j++
+		placeholders[i] = fmt.Sprintf("$%d", start+i)
 	}
 	return strings.Join(placeholders, ",")
 }
