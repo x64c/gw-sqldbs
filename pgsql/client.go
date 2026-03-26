@@ -18,15 +18,16 @@ import (
 // Client implements sqldbs.Client for PostgreSQL.
 // One Client = one server (host + port + credentials).
 type Client struct {
-	conf  ClientConf
-	store *sqldbs.RawSQLStore
-	dbs   map[string]*DB
+	conf   ClientConf
+	stores map[string]*sqldbs.RawSQLStore
+	dbs    map[string]*DB
 }
 
 func NewClient(conf ClientConf) *Client {
 	return &Client{
-		conf: conf,
-		dbs:  make(map[string]*DB),
+		conf:   conf,
+		stores: make(map[string]*sqldbs.RawSQLStore),
+		dbs:    make(map[string]*DB),
 	}
 }
 
@@ -75,7 +76,7 @@ func (c *Client) CreateDB(name string, rawConf jsontext.Value) error {
 	}
 
 	log.Printf("[INFO] pgsql db %q initialized (%s)", name, dbConf.DB)
-	c.dbs[name] = &DB{pool: pool, store: c.store}
+	c.dbs[name] = &DB{pool: pool, stores: c.stores}
 	return nil
 }
 
@@ -84,8 +85,8 @@ func (c *Client) DB(name string) (sqldbs.DB, bool) {
 	return db, ok
 }
 
-func (c *Client) RawSQLStore() *sqldbs.RawSQLStore {
-	return c.store
+func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {
+	return c.stores[name]
 }
 
 func (c *Client) Close() error {
@@ -97,16 +98,20 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// LoadRawSQL loads SQL statements from the given FS into this Client's store.
+// LoadRawSQL loads SQL statements from the given FS into a named store.
 // Picks .sql (standard) and .pgsql (dialect-specific) files.
-func (c *Client) LoadRawSQL(sqlFS fs.FS) error {
-	c.store = sqldbs.NewRawSQLStore()
-	return loadRawStmtsToStore(c.store, sqlFS)
+func (c *Client) LoadRawSQL(name string, sqlFS fs.FS) error {
+	store := sqldbs.NewRawSQLStore()
+	if err := loadRawStmtsToStore(store, sqlFS); err != nil {
+		return err
+	}
+	c.stores[name] = store
+	return nil
 }
 
 // PrepareClients loads PostgreSQL client configs from .sqldb-clients-pgsql.json
 // and registers them into the provided client map.
-func PrepareClients(appRoot string, clients map[string]sqldbs.Client, sqlFS fs.FS) error {
+func PrepareClients(appRoot string, clients map[string]sqldbs.Client) error {
 	confBytes, err := os.ReadFile(filepath.Join(appRoot, "config", ".sqldb-clients-pgsql.json"))
 	if err != nil {
 		return err
@@ -116,11 +121,7 @@ func PrepareClients(appRoot string, clients map[string]sqldbs.Client, sqlFS fs.F
 		return err
 	}
 	for name, conf := range confs {
-		client := NewClient(conf)
-		if err = client.LoadRawSQL(sqlFS); err != nil {
-			return fmt.Errorf("pgsql client %q: %w", name, err)
-		}
-		clients[name] = client
+		clients[name] = NewClient(conf)
 	}
 	return nil
 }

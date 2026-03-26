@@ -16,8 +16,9 @@ import (
 var _ sqldbs.DB = (*DB)(nil)
 
 type DB struct {
-	pool  *pgxpool.Pool
-	store *sqldbs.RawSQLStore
+	pool      *pgxpool.Pool
+	stores    map[string]*sqldbs.RawSQLStore
+	mainStore *sqldbs.RawSQLStore
 }
 
 // Exec executes SQL statement like INSERT, UPDATE, DELETE.
@@ -166,6 +167,14 @@ func (d *DB) InPlaceholders(start, cnt int) string {
 	return strings.Join(placeholders, ",")
 }
 
-func (d *DB) RawSQLStore() *sqldbs.RawSQLStore {
-	return d.store
+func (d *DB) RawSQLStore(name string) *sqldbs.RawSQLStore {
+	return d.stores[name]
+}
+
+func (d *DB) MainRawSQLStore() *sqldbs.RawSQLStore {
+	return d.mainStore
+}
+
+func (d *DB) SetMainRawSQLStore(name string) {
+	d.mainStore = d.stores[name]
 }
