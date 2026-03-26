@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -70,13 +71,29 @@ func (c *Client) CreateDB(name string, rawConf jsontext.Value) error {
 	}
 
 	log.Printf("[INFO] mysql db %q initialized (%s)", name, dbConf.DB)
-	c.dbs[name] = &DB{conn: conn, stores: c.stores}
+	c.dbs[name] = &DB{conn: conn, client: c}
 	return nil
 }
 
 func (c *Client) DB(name string) (sqldbs.DB, bool) {
 	db, ok := c.dbs[name]
 	return db, ok
+}
+
+func (c *Client) FirstPlaceholder() string {
+	return "?"
+}
+
+func (c *Client) NthPlaceholder(_ int) string {
+	return "?"
+}
+
+func (c *Client) InPlaceholders(_, cnt int) string {
+	placeholders := make([]string, cnt)
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+	return strings.Join(placeholders, ",")
 }
 
 func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {

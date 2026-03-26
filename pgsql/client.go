@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,13 +77,29 @@ func (c *Client) CreateDB(name string, rawConf jsontext.Value) error {
 	}
 
 	log.Printf("[INFO] pgsql db %q initialized (%s)", name, dbConf.DB)
-	c.dbs[name] = &DB{pool: pool, stores: c.stores}
+	c.dbs[name] = &DB{pool: pool, client: c}
 	return nil
 }
 
 func (c *Client) DB(name string) (sqldbs.DB, bool) {
 	db, ok := c.dbs[name]
 	return db, ok
+}
+
+func (c *Client) FirstPlaceholder() string {
+	return "$1"
+}
+
+func (c *Client) NthPlaceholder(n int) string {
+	return fmt.Sprintf("$%d", n)
+}
+
+func (c *Client) InPlaceholders(start, cnt int) string {
+	placeholders := make([]string, cnt)
+	for i := range placeholders {
+		placeholders[i] = fmt.Sprintf("$%d", start+i)
+	}
+	return strings.Join(placeholders, ",")
 }
 
 func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {

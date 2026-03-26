@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/x64c/gw v0.0.0-20260326162841-244bc062e0e2
+	github.com/x64c/gw v0.0.0-20260326204602-2bd1b566ac6b
 )
 
 require filippo.io/edwards25519 v1.2.0 // indirect

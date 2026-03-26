@@ -14,7 +14,7 @@ var _ sqldbs.DB = (*DB)(nil)
 
 type DB struct {
 	conn      *sql.DB
-	stores    map[string]*sqldbs.RawSQLStore
+	client    *Client
 	mainStore *sqldbs.RawSQLStore
 }
 
@@ -87,31 +87,36 @@ func (d *DB) Ping(ctx context.Context) error {
 	return d.conn.PingContext(ctx)
 }
 
+func (d *DB) Client() sqldbs.Client {
+	return d.client
+}
+
+
+// Convenience: delegates to Client
 
 func (d *DB) FirstPlaceholder() string {
-	return "?"
+	return d.client.FirstPlaceholder()
 }
 
-func (d *DB) NthPlaceholder(_ int) string {
-	return "?"
+func (d *DB) NthPlaceholder(n int) string {
+	return d.client.NthPlaceholder(n)
 }
 
-func (d *DB) InPlaceholders(_, cnt int) string {
-	placeholders := make([]string, cnt)
-	for i := range placeholders {
-		placeholders[i] = "?"
-	}
-	return strings.Join(placeholders, ",")
+func (d *DB) InPlaceholders(start, cnt int) string {
+	return d.client.InPlaceholders(start, cnt)
 }
 
 func (d *DB) RawSQLStore(name string) *sqldbs.RawSQLStore {
-	return d.stores[name]
+	return d.client.stores[name]
 }
 
 func (d *DB) MainRawSQLStore() *sqldbs.RawSQLStore {
+	if d.mainStore == nil {
+		panic("MainRawSQLStore not set — call SetMainRawSQLStore at boot")
+	}
 	return d.mainStore
 }
 
 func (d *DB) SetMainRawSQLStore(name string) {
-	d.mainStore = d.stores[name]
+	d.mainStore = d.client.stores[name]
 }
