@@ -80,6 +80,37 @@ func (c *Client) DB(name string) (sqldbs.DB, bool) {
 	return db, ok
 }
 
+func (c *Client) Close() error {
+	for name, db := range c.dbs {
+		log.Printf("[INFO] closing mysql db %q", name)
+		if err := db.conn.Close(); err != nil {
+			log.Printf("[ERROR] failed to close mysql db %q: %v", name, err)
+		} else {
+			log.Printf("[INFO] mysql db %q closed", name)
+		}
+	}
+	return nil
+}
+
+// Raw SQL Store
+
+func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {
+	return c.stores[name]
+}
+
+// LoadRawSQL loads SQL statements from the given FS into a named store.
+// Picks .sql (standard) and .mysql (dialect-specific) files.
+func (c *Client) LoadRawSQL(name string, sqlFS fs.FS) error {
+	store := sqldbs.NewRawSQLStore()
+	if err := loadRawStmtsToStore(store, sqlFS); err != nil {
+		return err
+	}
+	c.stores[name] = store
+	return nil
+}
+
+// Placeholder
+
 func (c *Client) FirstPlaceholder() string {
 	return "?"
 }
@@ -96,31 +127,10 @@ func (c *Client) InPlaceholders(_, cnt int) string {
 	return strings.Join(placeholders, ",")
 }
 
-func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {
-	return c.stores[name]
-}
+// Identifier Quoting
 
-func (c *Client) Close() error {
-	for name, db := range c.dbs {
-		log.Printf("[INFO] closing mysql db %q", name)
-		if err := db.conn.Close(); err != nil {
-			log.Printf("[ERROR] failed to close mysql db %q: %v", name, err)
-		} else {
-			log.Printf("[INFO] mysql db %q closed", name)
-		}
-	}
-	return nil
-}
-
-// LoadRawSQL loads SQL statements from the given FS into a named store.
-// Picks .sql (standard) and .mysql (dialect-specific) files.
-func (c *Client) LoadRawSQL(name string, sqlFS fs.FS) error {
-	store := sqldbs.NewRawSQLStore()
-	if err := loadRawStmtsToStore(store, sqlFS); err != nil {
-		return err
-	}
-	c.stores[name] = store
-	return nil
+func (c *Client) QuoteIdentifier(name string) string {
+	return "`" + name + "`"
 }
 
 // PrepareClients loads MySQL client configs from .sqldb-clients-mysql.json

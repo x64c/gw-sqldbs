@@ -86,6 +86,34 @@ func (c *Client) DB(name string) (sqldbs.DB, bool) {
 	return db, ok
 }
 
+func (c *Client) Close() error {
+	for name, db := range c.dbs {
+		log.Printf("[INFO] closing pgsql db %q", name)
+		db.pool.Close()
+		log.Printf("[INFO] pgsql db %q closed", name)
+	}
+	return nil
+}
+
+// Raw SQL Store
+
+func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {
+	return c.stores[name]
+}
+
+// LoadRawSQL loads SQL statements from the given FS into a named store.
+// Picks .sql (standard) and .pgsql (dialect-specific) files.
+func (c *Client) LoadRawSQL(name string, sqlFS fs.FS) error {
+	store := sqldbs.NewRawSQLStore()
+	if err := loadRawStmtsToStore(store, sqlFS); err != nil {
+		return err
+	}
+	c.stores[name] = store
+	return nil
+}
+
+// Placeholder
+
 func (c *Client) FirstPlaceholder() string {
 	return "$1"
 }
@@ -102,28 +130,10 @@ func (c *Client) InPlaceholders(start, cnt int) string {
 	return strings.Join(placeholders, ",")
 }
 
-func (c *Client) RawSQLStore(name string) *sqldbs.RawSQLStore {
-	return c.stores[name]
-}
+// Identifier Quoting
 
-func (c *Client) Close() error {
-	for name, db := range c.dbs {
-		log.Printf("[INFO] closing pgsql db %q", name)
-		db.pool.Close()
-		log.Printf("[INFO] pgsql db %q closed", name)
-	}
-	return nil
-}
-
-// LoadRawSQL loads SQL statements from the given FS into a named store.
-// Picks .sql (standard) and .pgsql (dialect-specific) files.
-func (c *Client) LoadRawSQL(name string, sqlFS fs.FS) error {
-	store := sqldbs.NewRawSQLStore()
-	if err := loadRawStmtsToStore(store, sqlFS); err != nil {
-		return err
-	}
-	c.stores[name] = store
-	return nil
+func (c *Client) QuoteIdentifier(name string) string {
+	return `"` + name + `"`
 }
 
 // PrepareClients loads PostgreSQL client configs from .sqldb-clients-pgsql.json
