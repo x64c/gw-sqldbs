@@ -3,8 +3,8 @@ module github.com/x64c/gw-sqldbs/pgsql
 go 1.26.2
 
 require (
-	github.com/jackc/pgx/v5 v5.9.1
-	github.com/x64c/gw v0.1.12
+	github.com/jackc/pgx/v5 v5.9.2
+	github.com/x64c/gw v0.1.13
 )
 
 require (
